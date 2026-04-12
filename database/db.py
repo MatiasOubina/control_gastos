@@ -39,11 +39,15 @@ def inicializar_db():
 
         CREATE TABLE IF NOT EXISTS movimientos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mes_id INTEGER NOT NULL,
             fecha TEXT NOT NULL,
-            subcategoria_id INTEGER NOT NULL,
+            categoria_id INTEGER NOT NULL,             
+            subcategoria_id INTEGER,
             descripcion TEXT,
             monto REAL NOT NULL,
             tipo TEXT NOT NULL CHECK(tipo IN ('ingreso', 'egreso')),
+            FOREIGN KEY (mes_id) REFERENCES meses(id),
+            FOREIGN KEY (categoria_id) REFERENCES categorias(id),
             FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)
         );
     """)

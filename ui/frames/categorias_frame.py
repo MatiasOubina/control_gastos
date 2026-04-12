@@ -107,18 +107,22 @@ class CategoriasFrame(tk.Frame):
         acciones.pack(side="right")
 
         tk.Button(
-            acciones, text="✏️",
-            bg="white", bd=0,
+            acciones, text="Editar",
+            bg="#3498db", fg="white",
+            font=("Arial", 8, "bold"),
+            bd=0, padx=8, pady=3,
             cursor="hand2",
             command=lambda c=cat: self._abrir_popup_categoria(c)
-        ).pack(side="left")
+        ).pack(side="left", padx=2)
 
         tk.Button(
-            acciones, text="🗑️",
-            bg="white", bd=0,
+            acciones, text="Baja",
+            bg="#e74c3c", fg="white",
+            font=("Arial", 8, "bold"),
+            bd=0, padx=8, pady=3,
             cursor="hand2",
             command=lambda c=cat: self._confirmar_deshabilitar_categoria(c)
-        ).pack(side="left")
+        ).pack(side="left", padx=2)
 
         tk.Button(
             acciones, text="+ Sub",
@@ -151,25 +155,35 @@ class CategoriasFrame(tk.Frame):
         acciones.pack(side="right")
 
         tk.Button(
-            acciones, text="✏️",
-            bg="white", bd=0,
+            acciones, text="Editar",
+            bg="#3498db", fg="white",
+            font=("Arial", 8, "bold"),
+            bd=0, padx=8, pady=3,
             cursor="hand2",
             command=lambda s=sub: self._abrir_popup_subcategoria(None, s)
-        ).pack(side="left")
+        ).pack(side="left", padx=2)
 
         tk.Button(
-            acciones, text="🗑️",
-            bg="white", bd=0,
+            acciones, text="Baja",
+            bg="#e74c3c", fg="white",
+            font=("Arial", 8, "bold"),
+            bd=0, padx=8, pady=3,
             cursor="hand2",
             command=lambda s=sub: self._confirmar_deshabilitar_subcategoria(s)
-        ).pack(side="left")
+        ).pack(side="left", padx=2)
 
     # ─── Popups ───────────────────────────────────────────────
+    def _centrar_popup(self, popup, ancho, alto):
+        self.update_idletasks()
+        ventana = self.winfo_toplevel()
+        x = ventana.winfo_x() + (ventana.winfo_width() // 2) - (ancho // 2)
+        y = ventana.winfo_y() + (ventana.winfo_height() // 2) - (alto // 2)
+        popup.geometry(f"{ancho}x{alto}+{x}+{y}")
 
     def _abrir_popup_categoria(self, cat=None):
         popup = tk.Toplevel(self)
         popup.title("Nueva categoría" if cat is None else "Editar categoría")
-        popup.geometry("320x220")
+        self._centrar_popup(popup, 320, 220)
         popup.resizable(False, False)
         popup.grab_set()
 
@@ -214,7 +228,7 @@ class CategoriasFrame(tk.Frame):
     def _abrir_popup_subcategoria(self, cat=None, sub=None):
         popup = tk.Toplevel(self)
         popup.title("Nueva subcategoría" if sub is None else "Editar subcategoría")
-        popup.geometry("320x160")
+        self._centrar_popup(popup, 320, 160)
         popup.resizable(False, False)
         popup.grab_set()
 

@@ -6,8 +6,9 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Control de Gastos")
-        self.geometry("950x600")
-        self.resizable(False, False)
+        self.geometry("1100x680")
+        self.resizable(True, True)
+        self.minsize(950, 600)
         inicializar_db()
         self._construir_ui()
 
@@ -70,6 +71,12 @@ class MainWindow(tk.Tk):
         if seccion == "categorias":
             from ui.frames.categorias_frame import CategoriasFrame
             CategoriasFrame(self.area_contenido).pack(fill="both", expand=True)
+        elif seccion == "movimientos":
+            from ui.frames.movimientos_frame import MovimientosFrame
+            MovimientosFrame(self.area_contenido).pack(fill="both", expand=True)
+        elif seccion == "resumen":
+            from ui.frames.resumen_frame import ResumenFrame
+            frame = ResumenFrame(self.area_contenido).pack(fill="both", expand=True)
         else:
             frame = tk.Frame(self.area_contenido, bg="#ecf0f1")
             frame.pack(fill="both", expand=True)
