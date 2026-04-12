@@ -61,25 +61,21 @@ class MainWindow(tk.Tk):
         self.frames = {}
 
     def mostrar_frame(self, seccion):
-        # Limpiar contenido actual
         for widget in self.area_contenido.winfo_children():
             widget.destroy()
 
-        # Resaltar botón activo
         for nombre, btn in self.botones_nav.items():
-            if nombre == seccion:
-                btn.config(bg="#1abc9c")
-            else:
-                btn.config(bg="#2c3e50")
+            btn.config(bg="#1abc9c" if nombre == seccion else "#2c3e50")
 
-        # Cargar el frame correspondiente 
-        frame = tk.Frame(self.area_contenido, bg="#ecf0f1")
-        frame.pack(fill="both", expand=True)
-
-        placeholder = tk.Label(
-            frame,
-            text=f"Sección: {seccion.capitalize()}\n(próximamente)",
-            bg="#ecf0f1", fg="#7f8c8d",
-            font=("Arial", 16)
-        )
-        placeholder.place(relx=0.5, rely=0.5, anchor="center")
+        if seccion == "categorias":
+            from ui.frames.categorias_frame import CategoriasFrame
+            CategoriasFrame(self.area_contenido).pack(fill="both", expand=True)
+        else:
+            frame = tk.Frame(self.area_contenido, bg="#ecf0f1")
+            frame.pack(fill="both", expand=True)
+            tk.Label(
+                frame,
+                text=f"Sección: {seccion.capitalize()}\n(próximamente)",
+                bg="#ecf0f1", fg="#7f8c8d",
+                font=("Arial", 16)  
+            ).place(relx=0.5, rely=0.5, anchor="center")

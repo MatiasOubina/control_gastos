@@ -16,14 +16,17 @@ def inicializar_db():
         CREATE TABLE IF NOT EXISTS categorias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
-            tipo TEXT NOT NULL CHECK(tipo IN ('ingreso', 'egreso'))
+            tipo TEXT NOT NULL CHECK(tipo IN ('ingreso', 'egreso')),
+            activa BOOLEAN DEFAULT 1             
         );
 
         CREATE TABLE IF NOT EXISTS subcategorias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             categoria_id INTEGER NOT NULL,
             nombre TEXT NOT NULL,
+            activa BOOLEAN DEFAULT 1,
             FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+                             
         );
 
         CREATE TABLE IF NOT EXISTS meses (
