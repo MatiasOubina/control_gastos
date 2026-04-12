@@ -231,3 +231,17 @@ def obtener_desglose_por_categoria(mes_id: int):
         }
         for row in resultado
     ]
+
+def actualizar_movimiento(movimiento_id: int, fecha: str, categoria_id: int,
+                          subcategoria_id: int, descripcion: str, monto: float, tipo: str):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        UPDATE movimientos
+        SET fecha = ?, categoria_id = ?, subcategoria_id = ?, descripcion = ?, monto = ?, tipo = ?
+        WHERE id = ?
+    """, (fecha, categoria_id, subcategoria_id, descripcion, monto, tipo, movimiento_id))
+    conexion.commit()
+
+    conexion.close()

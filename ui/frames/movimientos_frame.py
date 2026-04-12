@@ -8,6 +8,7 @@ from database.queries import (
     obtener_movimientos,
     insertar_movimiento,
     eliminar_movimiento,
+    actualizar_movimiento,
     obtener_resumen_mes,
     obtener_categorias,
     obtener_subcategorias,
@@ -110,6 +111,8 @@ class MovimientosFrame(tk.Frame):
         self.tabla.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
 
+        self.tabla.bind("<Double-1>", self._al_doble_clic_tabla)
+
         # Colores por tipo
         self.tabla.tag_configure("ingreso", foreground="#27ae60")
         self.tabla.tag_configure("egreso",  foreground="#e74c3c")
@@ -135,6 +138,159 @@ class MovimientosFrame(tk.Frame):
             cursor="hand2",
             command=self._eliminar_seleccionado
         ).pack(side="left", padx=(10, 0))
+    
+    def _al_doble_clic_tabla(self, event):
+        seleccion = self.tabla.selection()
+        if not seleccion:
+            return
+        mov_id = int(seleccion[0])
+        # Buscar el dict completo del movimiento en la lista actual
+        movimientos = obtener_movimientos(self.mes_actual["id"])
+        mov = next((m for m in movimientos if m["id"] == mov_id), None)
+        if mov:
+            self._abrir_popup_edicion_movimiento(mov)
+    
+    def _abrir_popup_edicion_movimiento(self, mov):
+        popup = tk.Toplevel(self)
+        popup.title("Editar movimiento")
+        self._centrar_popup(popup, 360, 340)
+        popup.resizable(False, False)
+        popup.grab_set()
+
+        tk.Label(popup, text="Editar movimiento", font=("Arial", 14, "bold"),
+                fg="#2c3e50").pack(pady=(20, 10))
+
+        form = tk.Frame(popup)
+        form.pack(padx=24, fill="x")
+
+        # Fecha
+        tk.Label(form, text="Fecha (YYYY-MM-DD):", anchor="w").grid(row=0, column=0, sticky="w", pady=4)
+        entry_fecha = tk.Entry(form, width=16)
+        entry_fecha.insert(0, mov["fecha"])
+        entry_fecha.grid(row=0, column=1, sticky="w", padx=(8, 0))
+
+        # Tipo
+        tk.Label(form, text="Tipo:", anchor="w").grid(row=1, column=0, sticky="w", pady=4)
+        combo_tipo = ttk.Combobox(form, values=["ingreso", "egreso"], width=12, state="readonly")
+        combo_tipo.set(mov["tipo"].lower())
+        combo_tipo.grid(row=1, column=1, sticky="w", padx=(8, 0))
+
+        # Categoría
+        tk.Label(form, text="Categoría:", anchor="w").grid(row=2, column=0, sticky="w", pady=4)
+        combo_cat = ttk.Combobox(form, width=18, state="readonly")
+        combo_cat.grid(row=2, column=1, sticky="w", padx=(8, 0))
+
+        # Subcategoría
+        tk.Label(form, text="Subcategoría:", anchor="w").grid(row=3, column=0, sticky="w", pady=4)
+        combo_sub = ttk.Combobox(form, width=18, state="readonly")
+        combo_sub.grid(row=3, column=1, sticky="w", padx=(8, 0))
+
+        # Descripción
+        tk.Label(form, text="Descripción:", anchor="w").grid(row=4, column=0, sticky="w", pady=4)
+        entry_desc = tk.Entry(form, width=22)
+        entry_desc.insert(0, mov["descripcion"] or "")
+        entry_desc.grid(row=4, column=1, sticky="w", padx=(8, 0))
+
+        # Monto
+        tk.Label(form, text="Monto:", anchor="w").grid(row=5, column=0, sticky="w", pady=4)
+        entry_monto = tk.Entry(form, width=14)
+        entry_monto.insert(0, str(mov["monto"]))
+        entry_monto.grid(row=5, column=1, sticky="w", padx=(8, 0))
+
+        # ── Cascada tipo → categoría → subcategoría ──
+        cats_cache = obtener_categorias()
+        cats_filtradas = []
+        subs_filtradas = []
+
+        def actualizar_categorias(tipo=None, seleccionar_nombre=None):
+            nonlocal cats_filtradas
+            t = tipo or combo_tipo.get()
+            cats_filtradas = [c for c in cats_cache if c["tipo"] == t]
+            combo_cat["values"] = [c["nombre"] for c in cats_filtradas]
+            if seleccionar_nombre:
+                nombres = [c["nombre"] for c in cats_filtradas]
+                if seleccionar_nombre in nombres:
+                    combo_cat.current(nombres.index(seleccionar_nombre))
+                else:
+                    combo_cat.set("")
+            else:
+                combo_cat.set("")
+            actualizar_subcategorias(seleccionar_nombre=None)
+
+        def actualizar_subcategorias(event=None, seleccionar_nombre=None):
+            nonlocal subs_filtradas
+            idx = combo_cat.current()
+            if idx < 0:
+                subs_filtradas = []
+                combo_sub["values"] = []
+                combo_sub.set("")
+                return
+            cat_id = cats_filtradas[idx]["id"]
+            subs_filtradas = obtener_subcategorias(cat_id)
+            combo_sub["values"] = [s["nombre"] for s in subs_filtradas]
+            nombre = seleccionar_nombre
+            if nombre:
+                nombres = [s["nombre"] for s in subs_filtradas]
+                if nombre in nombres:
+                    combo_sub.current(nombres.index(nombre))
+                else:
+                    combo_sub.set("")
+            else:
+                combo_sub.set("")
+
+        combo_tipo.bind("<<ComboboxSelected>>", lambda e: actualizar_categorias())
+        combo_cat.bind("<<ComboboxSelected>>", actualizar_subcategorias)
+
+    # Poblar con los valores actuales del movimiento
+        actualizar_categorias(tipo=mov["tipo"].lower(), seleccionar_nombre=mov["categoria"])
+        actualizar_subcategorias(seleccionar_nombre=mov["subcategoria"])
+
+        def guardar():
+            try:
+                fecha = entry_fecha.get().strip()
+                date.fromisoformat(fecha)
+                monto = float(entry_monto.get().replace(",", "."))
+            except ValueError:
+                messagebox.showerror("Error", "Fecha inválida o monto incorrecto.", parent=popup)
+                return
+
+            if combo_cat.current() < 0:
+                messagebox.showerror("Error", "Seleccioná una categoría.", parent=popup)
+                return
+
+            if combo_sub.current() < 0 and len(subs_filtradas) > 0:
+                messagebox.showerror("Error", "Seleccioná una subcategoría.", parent=popup)
+                return
+
+            cat_id = cats_filtradas[combo_cat.current()]["id"]
+            sub_id = subs_filtradas[combo_sub.current()]["id"] if combo_sub.current() >= 0 else None
+            tipo   = combo_tipo.get()
+            desc   = entry_desc.get().strip()
+
+            actualizar_movimiento(mov["id"], fecha, cat_id, sub_id, desc, monto, tipo)
+            self._recargar_datos()
+            popup.destroy()
+
+        botones = tk.Frame(popup)
+        botones.pack(pady=16)
+
+        tk.Button(
+            botones, text="Guardar",
+            bg="#1abc9c", fg="white",
+            font=("Arial", 11, "bold"),
+            bd=0, padx=16, pady=6,
+            cursor="hand2",
+            command=guardar
+        ).pack(side="left", padx=(0, 8))
+
+        tk.Button(
+            botones, text="Cancelar",
+            bg="#95a5a6", fg="white",
+            font=("Arial", 11, "bold"),
+            bd=0, padx=16, pady=6,
+            cursor="hand2",
+            command=popup.destroy
+        ).pack(side="left")
 
     # ─── Lógica de inicialización ──────────────────────────────
 
