@@ -8,6 +8,10 @@ from database.queries import (
     obtener_resumen_mes,
     obtener_desglose_por_categoria,
 )
+from tkinter import filedialog
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from database.queries import obtener_movimientos
 
 MESES_NOMBRES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -42,6 +46,15 @@ class ResumenFrame(tk.Frame):
         self.combo_mes = ttk.Combobox(header, state="readonly", width=20)
         self.combo_mes.pack(side="right", padx=20)
         self.combo_mes.bind("<<ComboboxSelected>>", self._on_mes_seleccionado)
+
+        tk.Button(
+            header, text="⬇ Exportar Excel",
+            bg="#27ae60", fg="white",
+            font=("Arial", 10, "bold"),
+            bd=0, padx=10, pady=4,
+            cursor="hand2",
+            command=self._exportar_excel
+        ).pack(side="right", padx=(0, 10))
 
         # ── Tarjetas de resumen ──
         self.frame_tarjetas = tk.Frame(self, bg="#f0f2f5")
@@ -150,3 +163,89 @@ class ResumenFrame(tk.Frame):
                 fila["tipo"].capitalize(),
                 f"$ {fila['total']:,.2f}",
             ), tags=(fila["tipo"],))
+
+    def _exportar_excel(self):
+        if not self.mes_actual:
+            messagebox.showwarning("Sin mes", "No hay ningún mes seleccionado.")
+            return
+
+        nombre_mes = MESES_NOMBRES[self.mes_actual["mes"]]
+        año = self.mes_actual["año"]
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel", "*.xlsx")],
+            initialfile=f"resumen_{nombre_mes}_{año}.xlsx",
+            title="Guardar exportación"
+        )
+        if not ruta:
+            return
+
+        resumen = obtener_resumen_mes(self.mes_actual["id"])
+        movimientos = obtener_movimientos(self.mes_actual["id"])
+        si = self.mes_actual["saldo_inicial"]
+        saldo_final = si + resumen["total_ingresos"] - resumen["total_egresos"]
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = f"{nombre_mes} {año}"
+
+        # ── Estilos ──
+        estilo_titulo = Font(bold=True, size=14)
+        estilo_header = Font(bold=True, color="FFFFFF")
+        fill_header   = PatternFill("solid", fgColor="2C3E50")
+        fill_ingreso  = PatternFill("solid", fgColor="D5F5E3")
+        fill_egreso   = PatternFill("solid", fgColor="FADBD8")
+        alinear_der   = Alignment(horizontal="right")
+
+        # ── Título ──
+        ws.merge_cells("A1:F1")
+        ws["A1"] = f"Resumen — {nombre_mes} {año}"
+        ws["A1"].font = estilo_titulo
+        ws["A1"].alignment = Alignment(horizontal="center")
+
+        # ── Bloque resumen ──
+        datos_resumen = [
+            ("Saldo inicial",  si),
+            ("Ingresos",       resumen["total_ingresos"]),
+            ("Egresos",        resumen["total_egresos"]),
+            ("Saldo final",    saldo_final),
+        ]
+        for i, (etiqueta, valor) in enumerate(datos_resumen, start=3):
+            ws[f"A{i}"] = etiqueta
+            ws[f"A{i}"].font = Font(bold=True)
+            ws[f"B{i}"] = valor
+            ws[f"B{i}"].number_format = '#,##0.00'
+            ws[f"B{i}"].alignment = alinear_der
+
+        # ── Encabezados de la tabla ──
+        fila_header = 8
+        encabezados = ["Fecha", "Categoría", "Subcategoría", "Descripción", "Tipo", "Monto"]
+        for col, texto in enumerate(encabezados, start=1):
+            celda = ws.cell(row=fila_header, column=col, value=texto)
+            celda.font = estilo_header
+            celda.fill = fill_header
+            celda.alignment = Alignment(horizontal="center")
+
+        # ── Movimientos ──
+        for fila, mov in enumerate(movimientos, start=fila_header + 1):
+            ws.cell(row=fila, column=1, value=mov["fecha"])
+            ws.cell(row=fila, column=2, value=mov["categoria"])
+            ws.cell(row=fila, column=3, value=mov["subcategoria"] or "")
+            ws.cell(row=fila, column=4, value=mov["descripcion"] or "")
+            ws.cell(row=fila, column=5, value=mov["tipo"].capitalize())
+            celda_monto = ws.cell(row=fila, column=6, value=mov["monto"])
+            celda_monto.number_format = '#,##0.00'
+            celda_monto.alignment = alinear_der
+
+            fill = fill_ingreso if mov["tipo"] == "ingreso" else fill_egreso
+            for col in range(1, 7):
+                ws.cell(row=fila, column=col).fill = fill
+
+        # ── Ancho de columnas ──
+        anchos = [14, 20, 20, 30, 12, 14]
+        for col, ancho in enumerate(anchos, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = ancho
+
+        wb.save(ruta)
+        messagebox.showinfo("Exportación exitosa", f"Archivo guardado en:\n{ruta}")  
