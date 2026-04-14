@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from datetime import date
+from datetime import date, datetime
 from database.queries import (
     obtener_mes_actual,
     obtener_meses,
@@ -333,7 +333,7 @@ class MovimientosFrame(tk.Frame):
             return
         for mov in obtener_movimientos(self.mes_actual["id"]):
             self.tabla.insert("", "end", iid=str(mov["id"]), values=(
-                mov["fecha"],
+                self._fmt_fecha(mov["fecha"]),
                 mov["categoria"],
                 mov["subcategoria"],
                 mov["descripcion"] or "",
@@ -451,9 +451,9 @@ class MovimientosFrame(tk.Frame):
         hoy = date.today()
 
         # Fecha
-        tk.Label(form, text="Fecha (YYYY-MM-DD):", anchor="w").grid(row=0, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Fecha (DD-MM-YYYY):", anchor="w").grid(row=0, column=0, sticky="w", pady=4)
         entry_fecha = tk.Entry(form, width=16)
-        entry_fecha.insert(0, hoy.strftime("%Y-%m-%d"))
+        entry_fecha.insert(0, hoy.strftime("%d-%m-%Y"))
         entry_fecha.grid(row=0, column=1, sticky="w", padx=(8, 0))
 
         # Tipo
@@ -511,11 +511,11 @@ class MovimientosFrame(tk.Frame):
 
         def guardar():
             try:
-                fecha = entry_fecha.get().strip()
-                date.fromisoformat(fecha)
+                fecha_input = entry_fecha.get().strip()
+                fecha = datetime.strptime(fecha_input, "%d-%m-%Y").strftime("%Y-%m-%d")
                 monto = float(entry_monto.get().replace(",", "."))
             except ValueError:
-                messagebox.showerror("Error", "Fecha inválida o monto incorrecto.", parent=popup)
+                messagebox.showerror("Error", "Fecha inválida (usá DD-MM-YYYY) o monto incorrecto.", parent=popup)
                 return
 
             if combo_cat.current() < 0:
@@ -568,3 +568,13 @@ class MovimientosFrame(tk.Frame):
             mov_id = int(seleccion[0])
             eliminar_movimiento(mov_id)
             self._recargar_datos()
+    
+    # ─── Conversión de fecha ──────────────────────────────────────────────
+    
+    def _fmt_fecha(self, fecha_iso: str) -> str:
+        """YYYY-MM-DD → DD-MM-YYYY"""
+        try:
+            from datetime import datetime
+            return datetime.strptime(fecha_iso, "%Y-%m-%d").strftime("%d-%m-%Y")
+        except ValueError:
+            return fecha_iso

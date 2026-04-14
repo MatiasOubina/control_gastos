@@ -229,7 +229,14 @@ class ResumenFrame(tk.Frame):
 
         # ── Movimientos ──
         for fila, mov in enumerate(movimientos, start=fila_header + 1):
-            ws.cell(row=fila, column=1, value=mov["fecha"])
+            
+            try:
+                from datetime import datetime as dt
+                fecha_display = dt.strptime(mov["fecha"], "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                fecha_display = mov["fecha"]
+
+            ws.cell(row=fila, column=1, value=fecha_display)
             ws.cell(row=fila, column=2, value=mov["categoria"])
             ws.cell(row=fila, column=3, value=mov["subcategoria"] or "")
             ws.cell(row=fila, column=4, value=mov["descripcion"] or "")
