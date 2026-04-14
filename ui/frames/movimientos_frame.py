@@ -395,6 +395,17 @@ class MovimientosFrame(tk.Frame):
                 messagebox.showerror("Error", "Revisá los datos ingresados.", parent=popup)
                 return
 
+            # Validación de mes duplicado
+            ya_existe = any(m["año"] == año and m["mes"] == mes for m in self._meses_lista)
+            if ya_existe:
+                nombre_mes = MESES_NOMBRES[mes]
+                messagebox.showwarning(
+                    "Mes duplicado",
+                    f"{nombre_mes} {año} ya existe.\nSeleccionalo desde el selector de mes.",
+                    parent=popup
+                )
+                return
+
             nuevo_id = insertar_mes(año, mes, saldo)
             self._recargar_combo_meses()
             self.mes_actual = {"id": nuevo_id, "año": año, "mes": mes, "saldo_inicial": saldo}
@@ -501,18 +512,22 @@ class MovimientosFrame(tk.Frame):
         def guardar():
             try:
                 fecha = entry_fecha.get().strip()
-                date.fromisoformat(fecha)  # valida formato
+                date.fromisoformat(fecha)
                 monto = float(entry_monto.get().replace(",", "."))
             except ValueError:
                 messagebox.showerror("Error", "Fecha inválida o monto incorrecto.", parent=popup)
+                return
+
+            if combo_cat.current() < 0:
+                messagebox.showerror("Error", "Seleccioná una categoría.", parent=popup)
                 return
 
             if combo_sub.current() < 0 and len(self._subs_filtradas) > 0:
                 messagebox.showerror("Error", "Seleccioná una subcategoría.", parent=popup)
                 return
 
-            sub_id  = self._subs_filtradas[combo_sub.current()]["id"] if combo_sub.current() >= 0 else None
-            cat_id  = self._cats_filtradas[combo_cat.current()]["id"]
+            cat_id = self._cats_filtradas[combo_cat.current()]["id"]
+            sub_id = self._subs_filtradas[combo_sub.current()]["id"] if combo_sub.current() >= 0 else None
             tipo   = combo_tipo.get()
             desc   = entry_desc.get().strip()
 

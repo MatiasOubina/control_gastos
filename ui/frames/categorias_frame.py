@@ -209,6 +209,18 @@ class CategoriasFrame(tk.Frame):
             if not nombre:
                 messagebox.showwarning("Campo vacío", "El nombre no puede estar vacío.", parent=popup)
                 return
+            categorias_existentes = obtener_categorias(tipo=tipo_var.get())
+            nombres = [c["nombre"].lower() for c in categorias_existentes]
+            # En edición, excluimos la propia categoría de la comparación
+            if cat:
+                nombres = [n for n in nombres if n != cat["nombre"].lower()]
+            if nombre.lower() in nombres:
+                messagebox.showwarning(
+                    "Nombre duplicado",
+                    f"Ya existe una categoría '{nombre}' de tipo {tipo_var.get()}.",
+                    parent=popup
+                )
+                return
             if cat:
                 actualizar_categoria(cat["id"], nombre)
             else:
@@ -243,6 +255,18 @@ class CategoriasFrame(tk.Frame):
             nombre = entrada.get().strip()
             if not nombre:
                 messagebox.showwarning("Campo vacío", "El nombre no puede estar vacío.", parent=popup)
+                return
+            cat_id_check = sub["categoria_id"] if sub else cat["id"]
+            subs_existentes = obtener_subcategorias(cat_id_check)
+            nombres = [s["nombre"].lower() for s in subs_existentes]
+            if sub:
+                nombres = [n for n in nombres if n != sub["nombre"].lower()]
+            if nombre.lower() in nombres:
+                messagebox.showwarning(
+                    "Nombre duplicado",
+                    f"Ya existe una subcategoría '{nombre}' en esta categoría.",
+                    parent=popup
+                )
                 return
             if sub:
                 actualizar_subcategoria(sub["id"], nombre)
