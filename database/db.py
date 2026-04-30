@@ -1,7 +1,15 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "gastos.db")
+APP_NAME = "ControlGastos"
+DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), APP_NAME)
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Si existe la variable de entorno CONTROL_GASTOS_ENV=development, usa la DB de test
+ENV = os.environ.get("CONTROL_GASTOS_ENV", "production")
+DB_NAME = "gastos_test.db" if ENV == "development" else "gastos.db"
+
+DB_PATH = os.path.join(DATA_DIR, DB_NAME)
 
 def obtener_conexion():
     conexion = sqlite3.connect(DB_PATH)
